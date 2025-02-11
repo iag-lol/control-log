@@ -1,0 +1,408 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Panel de Gestión - Agua, Basura y Neumáticos</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link
+    href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;600&display=swap"
+    rel="stylesheet"
+  >
+  <link
+    rel="stylesheet"
+    href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css"
+    crossorigin="anonymous"
+  >
+  <style>
+    :root {
+      --bg-color: #f7f9fc;
+      --text-color: #333;
+      --accent-color: #a3d2ca;
+      --header-bg: linear-gradient(135deg, #f8f9fa, #e9ecef);
+      --sidebar-bg: #ffffff;
+      --card-bg: #ffffff;
+      --shadow-color: rgba(0, 0, 0, 0.1);
+    }
+    [data-theme="dark"] {
+      --bg-color: #1e1e1e;
+      --text-color: #e0e0e0;
+      --accent-color: #457b9d;
+      --header-bg: linear-gradient(135deg, #2c2c2c, #1a1a1a);
+      --sidebar-bg: #262626;
+      --card-bg: #2a2a2a;
+      --shadow-color: rgba(0, 0, 0, 0.5);
+    }
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    html, body { height: 100%; }
+    body {
+      font-family: 'Poppins', sans-serif;
+      background-color: var(--bg-color);
+      color: var(--text-color);
+      overflow: hidden;
+      transition: background-color 0.3s, color 0.3s;
+      display: flex;
+      flex-direction: column;
+      height: 100vh;
+    }
+    a { text-decoration: none; color: var(--accent-color); }
+    ul { list-style: none; }
+    header, footer { width: 100%; }
+    header {
+      background: var(--header-bg);
+      border-bottom: 1px solid var(--accent-color);
+      box-shadow: 0 2px 4px var(--shadow-color);
+      flex-shrink: 0;
+      height: 70px;
+      padding: 0 20px;
+    }
+    .header-inner {
+      width: 100%;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      height: 100%;
+    }
+    .logo {
+      font-size: 1.8rem;
+      font-weight: 600;
+      color: var(--text-color);
+      margin-left: 10px;
+    }
+    .theme-toggle {
+      background: var(--accent-color);
+      border: none;
+      color: var(--text-color);
+      padding: 0.5rem 1rem;
+      border-radius: 8px;
+      cursor: pointer;
+      font-weight: 600;
+      transition: background 0.3s;
+      margin-right: 10px;
+    }
+    .theme-toggle:hover { opacity: 0.9; }
+    footer {
+      background: var(--header-bg);
+      border-top: 1px solid var(--accent-color);
+      box-shadow: 0 -2px 4px var(--shadow-color);
+      flex-shrink: 0;
+      height: 70px;
+      padding: 0 20px;
+    }
+    .footer-inner {
+      max-width: 1200px;
+      margin: 0 auto;
+      height: 100%;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+    .rights { font-size: 0.9rem; }
+    .contact-btn {
+      background: var(--accent-color);
+      border: none;
+      color: var(--text-color);
+      padding: 0.5rem 1rem;
+      border-radius: 8px;
+      cursor: pointer;
+      font-weight: 600;
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+      transition: background 0.3s;
+    }
+    .contact-btn:hover { opacity: 0.9; }
+    .wrapper {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      min-height: 0;
+    }
+    .container {
+      flex: 1;
+      display: flex;
+      width: 100%;
+      gap: 20px;
+      padding: 10px 20px;
+      overflow: hidden;
+      align-items: stretch;
+      min-height: 0;
+    }
+    .sidebar {
+      width: 220px;
+      background: var(--sidebar-bg);
+      padding: 1.5rem;
+      border: 1px solid var(--accent-color);
+      border-radius: 12px;
+      box-shadow: 0 4px 8px var(--shadow-color);
+      overflow-y: auto;
+      margin: 10px 0;
+    }
+    .sidebar ul li {
+      padding: 0.8rem 1rem;
+      margin-bottom: 1rem;
+      border-radius: 8px;
+      cursor: pointer;
+      transition: background 0.3s, transform 0.3s;
+    }
+    .sidebar ul li:hover,
+    .sidebar ul li.active {
+      background: var(--accent-color);
+      transform: scale(1.03);
+      color: var(--text-color);
+    }
+    .sidebar ul li i { margin-right: 0.5rem; }
+    .main {
+      flex: 1;
+      background: var(--card-bg);
+      padding: 2rem;
+      border: 1px solid var(--accent-color);
+      border-radius: 12px;
+      box-shadow: 0 4px 8px var(--shadow-color);
+      overflow-y: auto;
+    }
+    .main section {
+      display: none;
+      animation: fadeInUp 0.5s ease forwards;
+    }
+    .main section.active { display: block; }
+    @keyframes fadeInUp {
+      from { opacity: 0; transform: translateY(20px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+    #contactFormContainer {
+      display: none;
+      position: fixed;
+      bottom: 80px;
+      right: 20px;
+      background: var(--card-bg);
+      border: 1px solid var(--accent-color);
+      box-shadow: 0 4px 8px var(--shadow-color);
+      border-radius: 12px;
+      padding: 1.5rem;
+      z-index: 150;
+      width: 300px;
+    }
+    #contactFormContainer h3 { margin-bottom: 1rem; text-align: center; }
+    #contactFormContainer .form-group { margin-bottom: 1rem; }
+    #contactFormContainer .form-group label {
+      display: block;
+      margin-bottom: 0.5rem;
+      font-weight: 500;
+    }
+    #contactFormContainer .form-group input,
+    #contactFormContainer .form-group textarea {
+      width: 100%;
+      padding: 0.5rem;
+      border: 1px solid var(--accent-color);
+      border-radius: 4px;
+      background: transparent;
+      color: var(--text-color);
+    }
+    #contactFormContainer .form-group textarea { resize: vertical; min-height: 60px; }
+    #contactFormContainer button[type="submit"] {
+      width: 100%;
+      background: var(--accent-color);
+      border: none;
+      padding: 0.5rem;
+      border-radius: 8px;
+      cursor: pointer;
+      font-weight: 600;
+      color: var(--text-color);
+    }
+    #contactFormContainer button[type="submit"]:hover { opacity: 0.9; }
+    #mobileTitleModal {
+      display: none;
+      position: fixed;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      background: var(--card-bg);
+      padding: 1.5rem 2rem;
+      border-radius: 12px;
+      box-shadow: 0 4px 8px var(--shadow-color);
+      z-index: 200;
+      text-align: center;
+    }
+    #mobileTitleModal h2 { margin-bottom: 1rem; }
+    #mobileTitleModal button {
+      background: var(--accent-color);
+      border: none;
+      color: var(--text-color);
+      padding: 0.5rem 1rem;
+      border-radius: 8px;
+      cursor: pointer;
+      font-weight: 600;
+    }
+    /* Iframe style (only visible if Agua is active) */
+    #aguaIframe {
+      width: 100%;
+      height: 750px;
+      border: 2px solid var(--accent-color);
+      border-radius: 12px;
+      margin-top: 20px;
+      display: none; /* hidden by default */
+    }
+    @media (max-width: 768px) {
+      .container {
+        flex-direction: column;
+      }
+      .sidebar,
+      .main {
+        width: 95%;
+        margin: 10px auto;
+        height: auto;
+      }
+      .main {
+        max-height: calc(100vh - 220px);
+      }
+      .sidebar {
+        max-height: calc(100vh - 220px);
+      }
+      .main section h2 {
+        display: none;
+      }
+    }
+  </style>
+</head>
+<body data-theme="light">
+  <div class="wrapper">
+    <header>
+      <div class="header-inner">
+        <div class="logo" style="margin-left:10px;">Panel de Gestión</div>
+        <button class="theme-toggle" id="themeToggle" style="margin-right:10px;">Modo Oscuro</button>
+      </div>
+    </header>
+    <div class="container">
+      <aside class="sidebar">
+        <ul>
+          <li class="active" id="nav-agua" onclick="navigate('agua')">
+            <i class="fa-solid fa-tint"></i> Agua
+          </li>
+          <li id="nav-basura" onclick="navigate('basura')">
+            <i class="fa-solid fa-trash"></i> Basura
+          </li>
+          <li id="nav-neumaticos" onclick="navigate('neumaticos')">
+            <i class="fa-solid fa-car"></i> Neumáticos
+          </li>
+        </ul>
+      </aside>
+      <main class="main">
+        <section id="agua" class="active">
+          <h2>Solicitudes de Agua</h2>
+          <p>registro de solicitudes de agua Terminales El Roble, La Reina y Maria Angelica</p>
+          <!-- Iframe que cargará agua.html. Solo visible cuando section 'agua' es activa. -->
+          <iframe id="aguaIframe" src="secciones/agua.html"></iframe>
+        </section>
+        <section id="basura">
+          <h2>Gestión de Basura</h2>
+          <p>Optimiza la gestión y registro de residuos y operaciones de recolección con herramientas avanzadas.</p>
+        </section>
+        <section id="neumaticos">
+          <h2>Gestión de Neumáticos</h2>
+          <p>Controla y administra el inventario, registro y mantenimiento de neumáticos de forma precisa.</p>
+        </section>
+      </main>
+    </div>
+    <footer>
+      <div class="footer-inner">
+        <div class="rights">&copy; 2025 Derechos Reservados.</div>
+        <button class="contact-btn" onclick="toggleContactForm()">
+          <i class="fa-solid fa-envelope"></i> Contacto
+        </button>
+      </div>
+    </footer>
+  </div>
+  <div id="contactFormContainer">
+    <h3><i class="fa-solid fa-envelope"></i> Contáctanos</h3>
+    <form id="contactForm" onsubmit="sendContact(event)">
+      <div class="form-group">
+        <label for="contactName"><i class="fa-solid fa-user"></i> Nombre</label>
+        <input type="text" id="contactName" name="contactName" required />
+      </div>
+      <div class="form-group">
+        <label for="contactPosition"><i class="fa-solid fa-briefcase"></i> Cargo</label>
+        <input type="text" id="contactPosition" name="contactPosition" required />
+      </div>
+      <div class="form-group">
+        <label for="contactComment"><i class="fa-solid fa-comment"></i> Comentario</label>
+        <textarea id="contactComment" name="contactComment" required></textarea>
+      </div>
+      <button type="submit"><i class="fa-solid fa-paper-plane"></i> Enviar</button>
+    </form>
+  </div>
+  <div id="mobileTitleModal">
+    <h2 id="mobileTitleText"></h2>
+    <button onclick="closeMobileTitle()">Cerrar</button>
+  </div>
+  <script>
+    function navigate(sectionId) {
+      document.querySelectorAll(".main section").forEach(sec => sec.classList.remove("active"));
+      document.querySelectorAll(".sidebar ul li").forEach(li => li.classList.remove("active"));
+
+      document.getElementById(sectionId).classList.add("active");
+      document.getElementById("nav-" + sectionId).classList.add("active");
+
+      // Mostrar/ocultar iframe de agua
+      if (sectionId === "agua") {
+        document.getElementById("aguaIframe").style.display = "block";
+      } else {
+        document.getElementById("aguaIframe").style.display = "none";
+      }
+
+      // Si es móvil, muestra el modal con el título
+      if (window.innerWidth < 768) {
+        var titleElem = document.getElementById(sectionId).querySelector("h2");
+        var titleText = titleElem ? titleElem.textContent : "";
+        document.getElementById("mobileTitleText").textContent = titleText;
+        showMobileTitle();
+      }
+    }
+
+    function showMobileTitle() {
+      var modal = document.getElementById("mobileTitleModal");
+      modal.style.display = "block";
+      setTimeout(function () {
+        modal.style.display = "none";
+      }, 3000);
+    }
+    function closeMobileTitle() {
+      document.getElementById("mobileTitleModal").style.display = "none";
+    }
+
+    const themeToggleBtn = document.getElementById("themeToggle");
+    themeToggleBtn.addEventListener("click", function () {
+      const body = document.body;
+      const currentTheme = body.getAttribute("data-theme");
+      if (currentTheme === "light") {
+        body.setAttribute("data-theme", "dark");
+        themeToggleBtn.textContent = "Modo Claro";
+        localStorage.setItem("theme", "dark");
+      } else {
+        body.setAttribute("data-theme", "light");
+        themeToggleBtn.textContent = "Modo Oscuro";
+        localStorage.setItem("theme", "light");
+      }
+    });
+    window.addEventListener("load", function () {
+      const savedTheme = localStorage.getItem("theme") || "light";
+      document.body.setAttribute("data-theme", savedTheme);
+      themeToggleBtn.textContent =
+        savedTheme === "light" ? "Modo Oscuro" : "Modo Claro";
+    });
+
+    function toggleContactForm() {
+      const cfc = document.getElementById("contactFormContainer");
+      cfc.style.display = cfc.style.display === "block" ? "none" : "block";
+    }
+
+    function sendContact(e) {
+      e.preventDefault();
+      alert("Mensaje enviado. ¡Gracias por contactarnos!");
+      document.getElementById("contactForm").reset();
+      toggleContactForm();
+    }
+  </script>
+</body>
+</html>
