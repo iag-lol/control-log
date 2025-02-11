@@ -313,13 +313,21 @@
   <!-- Audio para alerta -->
   <audio id="alertSound" src="https://actions.google.com/sounds/v1/alarms/beep_short.ogg" preload="auto"></audio>
   <script>
-    // Reemplaza con la URL de tu Apps Script
-    const scriptURL = 'https://script.google.com/macros/s/AKfycbyU069TXbCeP52mu3E_rsX4BwD3I7iMtks8V5Xqyt9Q_tPDpHojJ41i2irxxsm2SUj8Lg/exec';
+    // Reemplaza con tu URL de Apps Script
+    const scriptURL = 'https://script.google.com/macros/s/TU_SCRIPT_ID/exec';
     let orders = [];
   
     window.addEventListener("load", loadWaterData);
   
-    // 1) Carga datos de la hoja, sin interpretar la fecha
+    // 1) parseLocalDate crea una fecha local sin huso horario
+    function parseLocalDate(yyyy_mm_dd) {
+      if (!yyyy_mm_dd) return null;
+      // Si viene "yyyy-mm-ddTHH..." recorta en "T"
+      const base = yyyy_mm_dd.includes("T") ? yyyy_mm_dd.split("T")[0] : yyyy_mm_dd;
+      const [y, m, d] = base.split("-");
+      return new Date(+y, +m - 1, +d); 
+    }
+  
     function loadWaterData() {
       fetch(scriptURL)
         .then(res => res.json())
@@ -333,28 +341,19 @@
         });
     }
   
-    // 2) parseLocalDate: convierte un "yyyy-MM-dd" a un Date, sin huso horario
-    function parseLocalDate(yyyy_mm_dd) {
-      if (!yyyy_mm_dd) return null;
-      // Separa año-mes-día
-      const [y, m, d] = yyyy_mm_dd.split("-");
-      // Retorna la fecha local (¡sin restar horas!)
-      return new Date(+y, +m - 1, +d);
-    }
-  
-    // 3) formatearFecha: si quieres mostrarla en la tabla como "dd-mm-aaaa"
-    function formatearFecha(yyyy_mm_dd) {
-      if (!yyyy_mm_dd) return "";
-      const fecha = parseLocalDate(yyyy_mm_dd);
+    // 2) formatearFecha usa parseLocalDate
+    function formatearFecha(fechaStr) {
+      if (!fechaStr) return "";
+      const fecha = parseLocalDate(fechaStr);
       const dd = String(fecha.getDate()).padStart(2, "0");
       const mm = String(fecha.getMonth() + 1).padStart(2, "0");
-      const aaaa = fecha.getFullYear();
-      return dd + "-" + mm + "-" + aaaa; 
+      const yyyy = fecha.getFullYear();
+      return dd + "-" + mm + "-" + yyyy;
     }
   
-    // 4) calcularDias: para días transcurridos
+    // 3) calcularDias usa parseLocalDate
     function calcularDias(fechaSolicitud, fechaLlegada = null) {
-      const inicio = parseLocalDate(fechaSolicitud) || new Date();
+      const inicio = parseLocalDate(fechaSolicitud) || new Date(); 
       const fin = fechaLlegada ? parseLocalDate(fechaLlegada) : new Date();
       const diffTime = Math.abs(fin - inicio);
       return Math.ceil(diffTime / (1000 * 60 * 60 * 24));
@@ -366,26 +365,20 @@
       openTbody.innerHTML = "";
       closedTbody.innerHTML = "";
   
-      orders.forEach(order => {
-        // order.fechaSolicitud es "yyyy-MM-dd"
-        // order.fechaLlegada es "yyyy-MM-dd" o ""
+      orders.forEach((order) => {
         const dias = calcularDias(order.fechaSolicitud, order.fechaLlegada);
-        // Para la tabla, formatear a dd-mm-aaaa (solo visual)
         const fechaSolFormateada = formatearFecha(order.fechaSolicitud);
         const fechaLlegadaFormateada = order.fechaLlegada
           ? formatearFecha(order.fechaLlegada)
           : "";
   
-        // Creamos <tr>
         const tr = document.createElement("tr");
-        // Columnas base
-        const keys = ["id", "terminal", "glpi", "cantidad", "solicita", "autoriza", "estado", "ppu"];
+        const keys = ["id","terminal","glpi","cantidad","solicita","autoriza","estado","ppu"];
         keys.forEach(key => {
           const td = document.createElement("td");
           td.textContent = order[key] || "";
           tr.appendChild(td);
         });
-        // Agregar fecha solicitud, fecha llegada, días
         [fechaSolFormateada, fechaLlegadaFormateada, dias].forEach(value => {
           const td = document.createElement("td");
           td.textContent = value;
@@ -393,11 +386,9 @@
         });
   
         if (!order.fechaLlegada) {
-          // Pedido abierto
           tr.addEventListener("click", () => cargarParaActualizar(order));
           openTbody.appendChild(tr);
         } else {
-          // Pedido cerrado
           closedTbody.appendChild(tr);
         }
       });
@@ -415,7 +406,6 @@
       const meses = ["Enero","Febrero","Marzo","Abril","Mayo","Junio","Julio","Agosto","Septiembre","Octubre","Noviembre","Diciembre"];
       const resumen = {};
       meses.forEach(m => resumen[m] = 0);
-      // Filtra pedidos con fechaLlegada
       const closedOrders = orders.filter(o => o.fechaLlegada);
       closedOrders.forEach(o => {
         const fecha = parseLocalDate(o.fechaLlegada);
@@ -451,19 +441,15 @@
       });
     }
   
-    // Manejo del formulario
     document.getElementById("waterForm").addEventListener("submit", function(e) {
       e.preventDefault();
       const formData = new FormData(this);
       const data = Object.fromEntries(formData.entries());
-      // data.fechaSolicitud y data.fechaLlegada son EXACTAMENTE lo que selecciona el usuario (yyyy-MM-dd)
   
       if (data.recordId && data.recordId !== "") {
-        // Actualizar local
         orders = orders.map(o => o.id === data.recordId ? { ...o, ...data } : o);
         mostrarToast("Registro actualizado correctamente.");
       } else {
-        // Nuevo
         data.id = "";
         orders.push(data);
         mostrarToast("Registro agregado correctamente.");
@@ -473,12 +459,10 @@
       actualizarTablas();
       actualizarGrafico();
   
-      // POST real a tu script
       fetch(scriptURL, { method: "POST", body: new URLSearchParams(data) })
         .then(response => response.json())
         .then(result => {
           mostrarToast(result.result);
-          // Recargamos para ver datos "reales" de la hoja
           loadWaterData();
         })
         .catch(error => {
@@ -486,9 +470,7 @@
         });
     });
   
-    // Cargar datos de un pedido abierto
     function cargarParaActualizar(order) {
-      // order.fechaSolicitud y order.fechaLlegada deben ser EXACTOS "yyyy-MM-dd"
       document.getElementById("recordId").value = order.id;
       document.getElementById("terminal").value = order.terminal;
       document.getElementById("glpi").value = order.glpi;
@@ -496,13 +478,16 @@
       document.getElementById("solicita").value = order.solicita;
       document.getElementById("estado").value = order.estado;
       document.getElementById("ppu").value = order.ppu;
-      document.getElementById("fechaSolicitud").value = order.fechaSolicitud || "";
-      // Limpia fecha llegada (o si quisieras permitir editar, setea order.fechaLlegada)
+      // Recortar si trae "T..."
+      const fechaSolSinHora = order.fechaSolicitud
+        ? order.fechaSolicitud.split("T")[0]
+        : "";
+      document.getElementById("fechaSolicitud").value = fechaSolSinHora;
+  
       document.getElementById("fechaLlegada").value = "";
       mostrarToast("Registro cargado para actualizar.");
     }
   
-    // Toast con sonido
     function mostrarToast(mensaje, icono = "success") {
       const audio = document.getElementById("alertSound");
       audio.play().catch(err => console.error("Error reproduciendo audio:", err));
