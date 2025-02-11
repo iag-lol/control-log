@@ -313,14 +313,27 @@
   <!-- Audio para alerta -->
   <audio id="alertSound" src="https://actions.google.com/sounds/v1/alarms/beep_short.ogg" preload="auto"></audio>
   <script>
-    // Reemplaza con tu URL desplegado de Apps Script
+    // Reemplaza con el URL de tu Apps Script
     const scriptURL = 'https://script.google.com/macros/s/AKfycbyU069TXbCeP52mu3E_rsX4BwD3I7iMtks8V5Xqyt9Q_tPDpHojJ41i2irxxsm2SUj8Lg/exec';
     let orders = [];
-
-    // Llamado inicial: leer datos de la hoja en tiempo real
+  
+    // Llamado inicial para leer datos al cargar la página
     window.addEventListener("load", loadWaterData);
-
-    // Cargar datos con doGet (tiempo real)
+  
+    // 1) parseLocalDate: crea una fecha local sin restar horas
+    function parseLocalDate(yyyy_mm_dd) {
+      if (!yyyy_mm_dd) return null;
+      // Si llega con "YYYY-MM-DDTHH:mm:ss", recorta antes de la "T"
+      const fechaISO = yyyy_mm_dd.includes("T")
+        ? yyyy_mm_dd.split("T")[0] // Ej: "2025-02-09"
+        : yyyy_mm_dd;
+      // Separa año, mes, día
+      const [y, m, d] = fechaISO.split("-");
+      // Crea la fecha local (ojo: mes en JS es 0-based)
+      return new Date(+y, +m - 1, +d);
+    }
+  
+    // Carga datos desde la hoja (doGet)
     function loadWaterData() {
       fetch(scriptURL)
         .then((res) => res.json())
@@ -333,36 +346,42 @@
           mostrarToast("Error al cargar datos: " + error.toString(), "error");
         });
     }
-
+  
+    // 2) formatearFecha: convierte "yyyy-mm-dd" a "dd-mm-aaaa" para mostrar en tabla
     function formatearFecha(fechaStr) {
       if (!fechaStr) return "";
-      const fecha = new Date(fechaStr);
+      const fecha = parseLocalDate(fechaStr); 
       const dd = String(fecha.getDate()).padStart(2, "0");
       const mm = String(fecha.getMonth() + 1).padStart(2, "0");
       const aaaa = fecha.getFullYear();
       return dd + "-" + mm + "-" + aaaa;
     }
-
+  
+    // 3) calcularDias: usa parseLocalDate para no perder días
     function calcularDias(fechaSolicitud, fechaLlegada = null) {
-      const inicio = new Date(fechaSolicitud);
-      const fin = fechaLlegada ? new Date(fechaLlegada) : new Date();
+      const inicio = parseLocalDate(fechaSolicitud) || new Date();
+      const fin = fechaLlegada ? parseLocalDate(fechaLlegada) : new Date();
       const diffTime = Math.abs(fin - inicio);
       return Math.ceil(diffTime / (1000 * 60 * 60 * 24));
     }
-
+  
     function actualizarTablas() {
       const openTbody = document.querySelector("#openOrdersTable tbody");
       const closedTbody = document.querySelector("#closedOrdersTable tbody");
       openTbody.innerHTML = "";
       closedTbody.innerHTML = "";
-
+  
       orders.forEach((order) => {
         const dias = calcularDias(order.fechaSolicitud, order.fechaLlegada);
+        // Para la tabla, formateamos para mostrar dd-mm-aaaa
         const fechaSolFormateada = formatearFecha(order.fechaSolicitud);
         const fechaLlegadaFormateada = order.fechaLlegada
           ? formatearFecha(order.fechaLlegada)
           : "";
+  
+        // Creamos la fila
         const tr = document.createElement("tr");
+        // Estas 8 columnas base
         const keys = [
           "id",
           "terminal",
@@ -373,19 +392,18 @@
           "estado",
           "ppu",
         ];
-        // Renderizar las 8 columnas base
         keys.forEach((key) => {
           const td = document.createElement("td");
           td.textContent = order[key] || "";
           tr.appendChild(td);
         });
-        // Renderizar fechas y días
+        // Agregamos las columnas de fecha solicitud, fecha llegada y días
         [fechaSolFormateada, fechaLlegadaFormateada, dias].forEach((value) => {
           const td = document.createElement("td");
           td.textContent = value;
           tr.appendChild(td);
         });
-
+  
         if (!order.fechaLlegada) {
           // Pedido abierto
           tr.addEventListener("click", () => cargarParaActualizar(order));
@@ -397,14 +415,14 @@
       });
       actualizarContadores();
     }
-
+  
     function actualizarContadores() {
       const activeCount = orders.filter((o) => !o.fechaLlegada).length;
       const closedCount = orders.filter((o) => o.fechaLlegada).length;
       document.getElementById("activeCount").textContent = activeCount;
       document.getElementById("closedCount").textContent = closedCount;
     }
-
+  
     function actualizarGrafico() {
       const meses = [
         "Enero",
@@ -424,7 +442,7 @@
       meses.forEach((m) => (resumen[m] = 0));
       const closedOrders = orders.filter((o) => o.fechaLlegada);
       closedOrders.forEach((o) => {
-        const fecha = new Date(o.fechaLlegada);
+        const fecha = parseLocalDate(o.fechaLlegada);
         const mes = meses[fecha.getMonth()];
         resumen[mes]++;
       });
@@ -432,7 +450,7 @@
       const values = labels.map((label) => resumen[label]);
       renderChart(labels, values);
     }
-
+  
     function renderChart(labels, values) {
       const ctx = document.getElementById("waterChart").getContext("2d");
       if (window.waterChartInstance) window.waterChartInstance.destroy();
@@ -458,13 +476,13 @@
         },
       });
     }
-
-    // Enviar (POST) al Apps Script
+  
+    // Enviar (POST) al Apps Script al hacer submit en el formulario
     document.getElementById("waterForm").addEventListener("submit", function (e) {
       e.preventDefault();
       const formData = new FormData(this);
       const data = Object.fromEntries(formData.entries());
-
+  
       if (data.recordId && data.recordId !== "") {
         // Actualizar local
         orders = orders.map((o) => (o.id === data.recordId ? { ...o, ...data } : o));
@@ -479,7 +497,7 @@
       document.getElementById("recordId").value = "";
       actualizarTablas();
       actualizarGrafico();
-
+  
       // POST real a tu script (tiempo real):
       fetch(scriptURL, { method: "POST", body: new URLSearchParams(data) })
         .then((response) => response.json())
@@ -492,7 +510,8 @@
           mostrarToast("Error: " + error.toString(), "error");
         });
     });
-
+  
+    // Cargar datos de un pedido abierto para actualizar
     function cargarParaActualizar(order) {
       document.getElementById("recordId").value = order.id;
       document.getElementById("terminal").value = order.terminal;
@@ -501,18 +520,19 @@
       document.getElementById("solicita").value = order.solicita;
       document.getElementById("estado").value = order.estado;
       document.getElementById("ppu").value = order.ppu;
-
-      // --- Asegúrate de recortar la parte de hora y zona horaria, si existe:
-      const fechaISO = order.fechaSolicitud
-        ? order.fechaSolicitud.split("T")[0] // "2025-02-09"
-        : ""; // En caso de que no exista
-
-      document.getElementById("fechaSolicitud").value = fechaISO;
+  
+      // Si viene con hora, ej. "2025-02-16T03:00:00Z", recortamos la parte de la T
+      const fechaSolSinHora = order.fechaSolicitud
+        ? order.fechaSolicitud.split("T")[0]
+        : "";
+      document.getElementById("fechaSolicitud").value = fechaSolSinHora;
+  
+      // Limpia la fecha de llegada, se ingresará nueva
       document.getElementById("fechaLlegada").value = "";
-
+  
       mostrarToast("Registro cargado para actualizar.");
     }
-
+  
     // Muestra un toast en la parte superior derecha + reproduce sonido
     function mostrarToast(mensaje, icono = "success") {
       const audio = document.getElementById("alertSound");
