@@ -313,28 +313,30 @@
   <!-- Audio para alerta -->
   <audio id="alertSound" src="https://actions.google.com/sounds/v1/alarms/beep_short.ogg" preload="auto"></audio>
   <script>
-    // Reemplaza con tu URL desplegado de Apps Script
+    // Reemplaza con tu URL de Apps Script
     const scriptURL = 'https://script.google.com/macros/s/AKfycbyU069TXbCeP52mu3E_rsX4BwD3I7iMtks8V5Xqyt9Q_tPDpHojJ41i2irxxsm2SUj8Lg/exec';
     let orders = [];
   
-    // Forzar la sección "agua" activa al cargar la página
+    // Fuerza que la sección "agua" esté activa al cargar la página
     window.addEventListener("load", () => {
-      // Activar la sección agua por defecto
-      document.getElementById("agua").classList.add("active");
-      // Si tienes un nav-agua, también "active"
+      // Activa #agua
+      const aguaSec = document.getElementById("agua");
+      if (aguaSec) aguaSec.classList.add("active");
+  
+      // Activa #nav-agua (en sidebar) si existe
       const navAgua = document.getElementById("nav-agua");
       if (navAgua) navAgua.classList.add("active");
   
+      // Carga datos
       loadWaterData();
     });
   
     // ============================
     // parseLocalDateIgnoreTZ("yyyy-mm-dd")
     // ============================
-    // Crea una fecha local sin restar horas
+    // Crea una fecha local sin huso horario para calcular días
     function parseLocalDateIgnoreTZ(yyyy_mm_dd) {
       if (!yyyy_mm_dd) return null;
-      // Si viniera con "T..." (ej. "2025-02-09T03:00:00Z"), recortamos
       const base = yyyy_mm_dd.includes("T") ? yyyy_mm_dd.split("T")[0] : yyyy_mm_dd;
       const [y, m, d] = base.split("-");
       return new Date(+y, +m - 1, +d);
@@ -357,12 +359,12 @@
     }
   
     // ============================
-    // formatearFecha: sin new Date
+    // formatearFecha(yyyy-mm-dd) -> dd-mm-yyyy
     // ============================
-    // Convierte "yyyy-mm-dd" -> "dd-mm-yyyy" como cadena
+    // No usamos new Date, solo reordenamos la cadena
     function formatearFecha(yyyy_mm_dd) {
       if (!yyyy_mm_dd) return "";
-      // Cortar si trae "T..."
+      // Si viene con hora (T...), la cortamos
       const base = yyyy_mm_dd.includes("T") ? yyyy_mm_dd.split("T")[0] : yyyy_mm_dd;
       const [y, m, d] = base.split("-");
       return d + "-" + m + "-" + y; // dd-mm-yyyy
@@ -387,10 +389,11 @@
       openTbody.innerHTML = "";
       closedTbody.innerHTML = "";
   
-      orders.forEach((order) => {
+      orders.forEach(order => {
+        // Calcula días
         const dias = calcularDias(order.fechaSolicitud, order.fechaLlegada);
   
-        // Convertir a dd-mm-yyyy
+        // Pasa de "yyyy-mm-dd" a "dd-mm-yyyy"
         const fechaSolFormateada = formatearFecha(order.fechaSolicitud);
         const fechaLlegadaFormateada = order.fechaLlegada
           ? formatearFecha(order.fechaLlegada)
@@ -398,27 +401,26 @@
   
         const tr = document.createElement("tr");
         const keys = [
-          "id", "terminal", "glpi", "cantidad", "solicita", "autoriza", "estado", "ppu"
+          "id","terminal","glpi","cantidad","solicita","autoriza","estado","ppu"
         ];
-        // Columnas base
-        keys.forEach((key) => {
+        // Rellenar columnas base
+        keys.forEach(key => {
           const td = document.createElement("td");
           td.textContent = order[key] || "";
           tr.appendChild(td);
         });
-        // Fechas y días transcurridos
-        [fechaSolFormateada, fechaLlegadaFormateada, dias].forEach((value) => {
+        // Agregar fechaSolicitud, fechaLlegada, dias
+        [fechaSolFormateada, fechaLlegadaFormateada, dias].forEach(value => {
           const td = document.createElement("td");
           td.textContent = value;
           tr.appendChild(td);
         });
   
+        // Pedidos abiertos (sin fechaLlegada)
         if (!order.fechaLlegada) {
-          // Pedido abierto
           tr.addEventListener("click", () => cargarParaActualizar(order));
           openTbody.appendChild(tr);
         } else {
-          // Pedido cerrado
           closedTbody.appendChild(tr);
         }
       });
@@ -446,8 +448,8 @@
       const closedOrders = orders.filter(o => o.fechaLlegada);
       closedOrders.forEach(o => {
         const fecha = parseLocalDateIgnoreTZ(o.fechaLlegada);
-        const mes = meses[fecha.getMonth()];
-        resumen[mes]++;
+        const mes = fecha.getMonth(); // sin restar horas
+        resumen[meses[mes]]++;
       });
       const labels = meses;
       const values = labels.map(label => resumen[label]);
@@ -486,10 +488,12 @@
       const formData = new FormData(this);
       const data = Object.fromEntries(formData.entries());
   
+      // Si ya existe recordId => actualización
       if (data.recordId && data.recordId !== "") {
         orders = orders.map(o => o.id === data.recordId ? { ...o, ...data } : o);
         mostrarToast("Registro actualizado correctamente.");
       } else {
+        // Nuevo
         data.id = "";
         orders.push(data);
         mostrarToast("Registro agregado correctamente.");
@@ -499,10 +503,12 @@
       actualizarTablas();
       actualizarGrafico();
   
+      // Envía al Apps Script
       fetch(scriptURL, { method: "POST", body: new URLSearchParams(data) })
         .then(response => response.json())
         .then(result => {
           mostrarToast(result.result);
+          // Recargamos para ver datos reales
           loadWaterData();
         })
         .catch(error => {
@@ -522,12 +528,14 @@
       document.getElementById("estado").value = order.estado;
       document.getElementById("ppu").value = order.ppu;
   
-      // Quitar parte "T..." si existe
+      // Quitar "T..." si existe
       const fechaSolSinHora = order.fechaSolicitud
         ? order.fechaSolicitud.split("T")[0]
         : "";
+      // Colocamos en el <input type="date"> => "yyyy-mm-dd"
       document.getElementById("fechaSolicitud").value = fechaSolSinHora;
   
+      // Limpiamos fechaLlegada => se ingresará manual
       document.getElementById("fechaLlegada").value = "";
       mostrarToast("Registro cargado para actualizar.");
     }
@@ -549,6 +557,7 @@
       });
     }
   </script>
+  
   
   
 </body>
