@@ -365,19 +365,29 @@
       const aguaIframe = document.getElementById("aguaIframe");
       const basuraIframe = document.getElementById("basuraIframe");
   
-      // Si tienes un iframe para agua
+      // Manejo de iframe AGUA
       if (aguaIframe) {
         if (sectionId === "agua") {
           aguaIframe.style.display = "block";
+          // Opcional: si quieres volver a cargar Agua:
+          // const aWin = aguaIframe.contentWindow;
+          // if (aWin && typeof aWin.loadWaterData === "function") {
+          //   aWin.loadWaterData();
+          // }
         } else {
           aguaIframe.style.display = "none";
         }
       }
   
-      // Si tienes un iframe para basura
+      // Manejo de iframe BASURA
       if (basuraIframe) {
         if (sectionId === "basura") {
           basuraIframe.style.display = "block";
+          // <<--- Forzamos la recarga de datos en la sección 'basura'
+          const bWin = basuraIframe.contentWindow;
+          if (bWin && typeof bWin.loadWasteData === "function") {
+            bWin.loadWasteData();
+          }
         } else {
           basuraIframe.style.display = "none";
         }
@@ -438,6 +448,7 @@
       toggleContactForm();
     }
   </script>
+  
   
 </body>
 </html>

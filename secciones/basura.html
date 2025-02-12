@@ -332,75 +332,75 @@
   
   <script>
     // Reemplaza con tu scriptURL para “Basura”
-    const wasteScriptURL = 'https://script.google.com/macros/s/AKfycbwgtvk2byIZ5o_Wi-S0oYZevybrV8mJuDOCB_FXncIgsBBCwavz5Ang1WoWzHrH_EwCcQ/exec';
+    const wasteScriptURL = "https://script.google.com/macros/s/AKfycbwgtvk2byIZ5o_Wi-S0oYZevybrV8mJuDOCB_FXncIgsBBCwavz5Ang1WoWzHrH_EwCcQ/exec";
     let wasteOrders = [];
-
+  
     window.addEventListener("load", loadWasteData);
-
+  
     // parseLocalDateIgnoreTZ para calcular días sin restar un día
     function parseLocalDateIgnoreTZ(yyyy_mm_dd) {
       if (!yyyy_mm_dd) return null;
-      const base = yyyy_mm_dd.includes('T') ? yyyy_mm_dd.split('T')[0] : yyyy_mm_dd;
-      const [y, m, d] = base.split('-');
+      const base = yyyy_mm_dd.includes("T") ? yyyy_mm_dd.split("T")[0] : yyyy_mm_dd;
+      const [y, m, d] = base.split("-");
       return new Date(+y, +m - 1, +d);
     }
-
+  
     function loadWasteData() {
-      fetch(wasteScriptURL)
+      // Se le añade un parámetro "nocache" para asegurar que no queden datos en caché
+      fetch(wasteScriptURL + "?nocache=" + new Date().getTime())
         .then(res => res.json())
         .then(data => {
+          console.log("Datos recibidos (basura):", data); // Para debug
           wasteOrders = data.orders || [];
           actualizarWasteTablas();
           actualizarWasteGrafico();
         })
         .catch(error => {
-          mostrarToast('Error al cargar datos: ' + error.toString(), 'error');
+          mostrarToast("Error al cargar datos: " + error.toString(), "error");
         });
     }
-
+  
     function formatearBasuraFecha(yyyy_mm_dd) {
-      if (!yyyy_mm_dd) return '';
-      const base = yyyy_mm_dd.includes('T') ? yyyy_mm_dd.split('T')[0] : yyyy_mm_dd;
-      const [y, m, d] = base.split('-');
+      if (!yyyy_mm_dd) return "";
+      const base = yyyy_mm_dd.includes("T") ? yyyy_mm_dd.split("T")[0] : yyyy_mm_dd;
+      const [y, m, d] = base.split("-");
       return `${d}-${m}-${y}`; // dd-mm-yyyy
     }
-
+  
     function calcularWasteDias(fechaSolicitud, fechaLlegada = null) {
       const inicio = fechaSolicitud ? parseLocalDateIgnoreTZ(fechaSolicitud) : new Date();
       const fin = fechaLlegada ? parseLocalDateIgnoreTZ(fechaLlegada) : new Date();
       const diffTime = Math.abs(fin - inicio);
       return Math.ceil(diffTime / (1000 * 60 * 60 * 24));
     }
-
+  
     function actualizarWasteTablas() {
-      const openTbody = document.querySelector('#openWasteTable tbody');
-      const closedTbody = document.querySelector('#closedWasteTable tbody');
-      openTbody.innerHTML = '';
-      closedTbody.innerHTML = '';
-
+      const openTbody = document.querySelector("#openWasteTable tbody");
+      const closedTbody = document.querySelector("#closedWasteTable tbody");
+      openTbody.innerHTML = "";
+      closedTbody.innerHTML = "";
+  
       wasteOrders.forEach(order => {
         const dias = calcularWasteDias(order.fechaSolicitud, order.fechaLlegada);
         const fechaSolFormateada = formatearBasuraFecha(order.fechaSolicitud);
-        const fechaLlegadaFormateada = order.fechaLlegada
-          ? formatearBasuraFecha(order.fechaLlegada)
-          : '';
-
-        const tr = document.createElement('tr');
+        const fechaLlegadaFormateada = order.fechaLlegada ? formatearBasuraFecha(order.fechaLlegada) : "";
+  
+        const tr = document.createElement("tr");
         // Ajustar las claves: 'zona','factura' en lugar de ppu
-        const keys = ['id','terminal','glpi','cantidad','zona','solicita','autoriza','estado','factura'];
+        const keys = ["id","terminal","glpi","cantidad","zona","solicita","autoriza","estado","factura"];
         keys.forEach(key => {
-          const td = document.createElement('td');
-          td.textContent = order[key] || '';
+          const td = document.createElement("td");
+          td.textContent = order[key] || "";
           tr.appendChild(td);
         });
         [fechaSolFormateada, fechaLlegadaFormateada, dias].forEach(value => {
-          const td = document.createElement('td');
+          const td = document.createElement("td");
           td.textContent = value;
           tr.appendChild(td);
         });
-
+  
         if (!order.fechaLlegada) {
-          tr.addEventListener('click', () => cargarWasteParaActualizar(order));
+          tr.addEventListener("click", () => cargarWasteParaActualizar(order));
           openTbody.appendChild(tr);
         } else {
           closedTbody.appendChild(tr);
@@ -408,22 +408,22 @@
       });
       actualizarWasteContadores();
     }
-
+  
     function actualizarWasteContadores() {
       const activeCount = wasteOrders.filter(o => !o.fechaLlegada).length;
       const closedCount = wasteOrders.filter(o => o.fechaLlegada).length;
-      document.getElementById('activeCount').textContent = activeCount;
-      document.getElementById('closedCount').textContent = closedCount;
+      document.getElementById("activeCount").textContent = activeCount;
+      document.getElementById("closedCount").textContent = closedCount;
     }
-
+  
     function actualizarWasteGrafico() {
       const meses = [
-        'Enero','Febrero','Marzo','Abril','Mayo','Junio',
-        'Julio','Agosto','Septiembre','Octubre','Noviembre','Diciembre'
+        "Enero","Febrero","Marzo","Abril","Mayo","Junio",
+        "Julio","Agosto","Septiembre","Octubre","Noviembre","Diciembre"
       ];
       const resumen = {};
       meses.forEach(m => resumen[m] = 0);
-
+  
       const closedOrders = wasteOrders.filter(o => o.fechaLlegada);
       closedOrders.forEach(o => {
         const fecha = parseLocalDateIgnoreTZ(o.fechaLlegada);
@@ -434,87 +434,89 @@
       const values = labels.map(label => resumen[label]);
       renderWasteChart(labels, values);
     }
-
+  
     function renderWasteChart(labels, values) {
-      const ctx = document.getElementById('wasteChart').getContext('2d');
+      const ctx = document.getElementById("wasteChart").getContext("2d");
       if (window.wasteChartInstance) window.wasteChartInstance.destroy();
       window.wasteChartInstance = new Chart(ctx, {
-        type: 'bar',
+        type: "bar",
         data: {
           labels,
           datasets: [{
-            label: 'Pedidos Cerrados (por mes)',
+            label: "Pedidos Cerrados (por mes)",
             data: values,
-            backgroundColor: 'rgba(163,210,202,0.5)',
-            borderColor: 'rgba(163,210,202,1)',
+            backgroundColor: "rgba(163,210,202,0.5)",
+            borderColor: "rgba(163,210,202,1)",
             borderWidth: 1
           }]
         },
         options: {
           scales: {
-            x: { title: { display: true, text: 'Mes' } },
-            y: { beginAtZero: true, title: { display: true, text: 'Cantidad de Pedidos' } }
+            x: { title: { display: true, text: "Mes" } },
+            y: { beginAtZero: true, title: { display: true, text: "Cantidad de Pedidos" } }
           }
         }
       });
     }
-
-    document.getElementById('wasteForm').addEventListener('submit', function(e) {
+  
+    document.getElementById("wasteForm").addEventListener("submit", function(e) {
       e.preventDefault();
       const formData = new FormData(this);
       const data = Object.fromEntries(formData.entries());
-
-      if (data.recordId && data.recordId !== '') {
+  
+      if (data.recordId && data.recordId !== "") {
         wasteOrders = wasteOrders.map(o => o.id === data.recordId ? { ...o, ...data } : o);
-        mostrarToast('Registro de Basura actualizado correctamente.');
+        mostrarToast("Registro de Basura actualizado correctamente.");
       } else {
-        data.id = '';
+        data.id = "";
         wasteOrders.push(data);
-        mostrarToast('Registro de Basura agregado correctamente.');
+        mostrarToast("Registro de Basura agregado correctamente.");
       }
       this.reset();
-      document.getElementById('recordId').value = '';
+      document.getElementById("recordId").value = "";
       actualizarWasteTablas();
       actualizarWasteGrafico();
-
-      fetch(wasteScriptURL, { method: 'POST', body: new URLSearchParams(data) })
+  
+      // Realizar POST
+      fetch(wasteScriptURL, { method: "POST", body: new URLSearchParams(data) })
         .then(response => response.json())
         .then(result => {
           mostrarToast(result.result);
+          // Volver a cargar datos en tiempo real
           loadWasteData();
         })
         .catch(error => {
-          mostrarToast('Error: ' + error.toString(), 'error');
+          mostrarToast("Error: " + error.toString(), "error");
         });
     });
-
+  
     function cargarWasteParaActualizar(order) {
-      document.getElementById('recordId').value = order.id;
-      document.getElementById('terminal').value = order.terminal;
-      document.getElementById('glpi').value = order.glpi;
-      document.getElementById('cantidad').value = order.cantidad;
-      document.getElementById('zona').value = order.zona || '';
-      document.getElementById('solicita').value = order.solicita;
-      document.getElementById('estado').value = order.estado;
-      document.getElementById('autoriza').value = order.autoriza;
-      document.getElementById('ppu').value = order.factura;
-
+      document.getElementById("recordId").value = order.id;
+      document.getElementById("terminal").value = order.terminal;
+      document.getElementById("glpi").value = order.glpi;
+      document.getElementById("cantidad").value = order.cantidad;
+      document.getElementById("zona").value = order.zona || "";
+      document.getElementById("solicita").value = order.solicita;
+      document.getElementById("estado").value = order.estado;
+      document.getElementById("autoriza").value = order.autoriza;
+      document.getElementById("ppu").value = order.factura;
+  
       const fechaSolSinHora = order.fechaSolicitud
-        ? order.fechaSolicitud.split('T')[0]
-        : '';
-      document.getElementById('fechaSolicitud').value = fechaSolSinHora;
-
-      document.getElementById('fechaLlegada').value = '';
-      mostrarToast('Registro cargado para actualizar Basura.');
+        ? order.fechaSolicitud.split("T")[0]
+        : "";
+      document.getElementById("fechaSolicitud").value = fechaSolSinHora;
+  
+      document.getElementById("fechaLlegada").value = "";
+      mostrarToast("Registro cargado para actualizar Basura.");
     }
-
+  
     // Reusa la función de toast
-    function mostrarToast(mensaje, icono = 'success') {
-      const audio = document.getElementById('alertSound');
-      audio.play().catch(err => console.error('Error reproduciendo audio:', err));
+    function mostrarToast(mensaje, icono = "success") {
+      const audio = document.getElementById("alertSound");
+      audio.play().catch(err => console.error("Error reproduciendo audio:", err));
       Swal.fire({
         toast: true,
-        position: 'top-end',
+        position: "top-end",
         icon: icono,
         title: mensaje,
         showConfirmButton: false,
@@ -522,24 +524,24 @@
         timerProgressBar: true
       });
     }
-
+  
     // ======== Exportar PDF y Excel ========
-    const pdfBtn = document.getElementById('pdfBtn');
-    const excelBtn = document.getElementById('excelBtn');
-
-    pdfBtn.addEventListener('click', () => {
+    const pdfBtn = document.getElementById("pdfBtn");
+    const excelBtn = document.getElementById("excelBtn");
+  
+    pdfBtn.addEventListener("click", () => {
       generarInformePDF();
     });
-
-    excelBtn.addEventListener('click', () => {
+  
+    excelBtn.addEventListener("click", () => {
       generarInformeExcel();
     });
-
+  
     // Fix for 'Unexpected end of input': small delay before print
     function generarInformePDF() {
-      const openTableHTML = document.getElementById('openWasteTable').outerHTML;
-      const closedTableHTML = document.getElementById('closedWasteTable').outerHTML;
-
+      const openTableHTML = document.getElementById("openWasteTable").outerHTML;
+      const closedTableHTML = document.getElementById("closedWasteTable").outerHTML;
+  
       const newWin = window.open("", "_blank");
       newWin.document.write(`<!DOCTYPE html><html><head>
         <title>Informe PDF Basura</title>
@@ -561,39 +563,40 @@
         newWin.close();
       }, 100);
     }
-
+  
     function generarInformeExcel() {
       const csvContent = [];
-
+  
       csvContent.push("PEDIDOS ABIERTOS\n");
-      csvContent.push(tableToCSV(document.getElementById('openWasteTable')));
+      csvContent.push(tableToCSV(document.getElementById("openWasteTable")));
       csvContent.push("\nPEDIDOS CERRADOS\n");
-      csvContent.push(tableToCSV(document.getElementById('closedWasteTable')));
-
+      csvContent.push(tableToCSV(document.getElementById("closedWasteTable")));
+  
       const finalCSV = csvContent.join("\n");
-      const blob = new Blob([finalCSV], { type: 'text/csv;charset=utf-8;' });
+      const blob = new Blob([finalCSV], { type: "text/csv;charset=utf-8;" });
       const url = URL.createObjectURL(blob);
-      const link = document.createElement('a');
+      const link = document.createElement("a");
       link.href = url;
-      link.setAttribute('download', 'InformeBasura.csv');
+      link.setAttribute("download", "InformeBasura.csv");
       document.body.appendChild(link);
       link.click();
       document.body.removeChild(link);
     }
-
+  
     function tableToCSV(table) {
-      const rows = table.querySelectorAll('tr');
+      const rows = table.querySelectorAll("tr");
       const lines = [];
       rows.forEach(row => {
-        const cols = row.querySelectorAll('th, td');
+        const cols = row.querySelectorAll("th, td");
         const rowData = [];
         cols.forEach(cell => {
-          rowData.push(cell.innerText.replace(/,/g, ' '));
+          rowData.push(cell.innerText.replace(/,/g, " "));
         });
-        lines.push(rowData.join(','));
+        lines.push(rowData.join(","));
       });
-      return lines.join('\\n');
+      return lines.join("\\n");
     }
   </script>
+  
 </body>
 </html>
