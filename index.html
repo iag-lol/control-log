@@ -291,19 +291,30 @@
       <main class="main">
         <section id="agua" class="active">
           <h2>Solicitudes de Agua</h2>
-          <p>registro de solicitudes de agua Terminales El Roble, La Reina y Maria Angelica</p>
-          <!-- Iframe que cargará agua.html. Solo visible cuando section 'agua' es activa. -->
-          <iframe id="aguaIframe" src="secciones/agua.html"></iframe>
+          <p>Registro de solicitudes de agua Terminales El Roble, La Reina y María Angélica</p>
+          <!-- Iframe para agua.html, tal como ya lo tienes -->
+          <iframe id="aguaIframe"
+                  src="secciones/agua.html"
+                  style="width: 100%; height: 600px; border: none;">
+          </iframe>
         </section>
+      
         <section id="basura">
           <h2>Gestión de Basura</h2>
           <p>Optimiza la gestión y registro de residuos y operaciones de recolección con herramientas avanzadas.</p>
+          <!-- Iframe para basura.html, oculto por defecto si usas navigate(...) -->
+          <iframe id="basuraIframe"
+                  src="secciones/basura.html"
+                  style="width: 100%; height: 600px; border: none; display: none;">
+          </iframe>
         </section>
+      
         <section id="neumaticos">
           <h2>Gestión de Neumáticos</h2>
           <p>Controla y administra el inventario, registro y mantenimiento de neumáticos de forma precisa.</p>
         </section>
       </main>
+      
     </div>
     <footer>
       <div class="footer-inner">
@@ -338,19 +349,38 @@
   </div>
   <script>
     function navigate(sectionId) {
+      // Quitar .active de todas las secciones
       document.querySelectorAll(".main section").forEach(sec => sec.classList.remove("active"));
+      // Quitar .active de todos los <li> en la sidebar
       document.querySelectorAll(".sidebar ul li").forEach(li => li.classList.remove("active"));
-
+  
+      // Agregar .active a la sección pedida
       document.getElementById(sectionId).classList.add("active");
+      // Agregar .active al li correspondiente
       document.getElementById("nav-" + sectionId).classList.add("active");
-
-      // Mostrar/ocultar iframe de agua
-      if (sectionId === "agua") {
-        document.getElementById("aguaIframe").style.display = "block";
-      } else {
-        document.getElementById("aguaIframe").style.display = "none";
+  
+      // Mostrar/ocultar iframe de agua y basura
+      const aguaIframe = document.getElementById("aguaIframe");
+      const basuraIframe = document.getElementById("basuraIframe");
+  
+      // Si tienes un iframe para agua
+      if (aguaIframe) {
+        if (sectionId === "agua") {
+          aguaIframe.style.display = "block";
+        } else {
+          aguaIframe.style.display = "none";
+        }
       }
-
+  
+      // Si tienes un iframe para basura
+      if (basuraIframe) {
+        if (sectionId === "basura") {
+          basuraIframe.style.display = "block";
+        } else {
+          basuraIframe.style.display = "none";
+        }
+      }
+  
       // Si es móvil, muestra el modal con el título
       if (window.innerWidth < 768) {
         var titleElem = document.getElementById(sectionId).querySelector("h2");
@@ -359,7 +389,7 @@
         showMobileTitle();
       }
     }
-
+  
     function showMobileTitle() {
       var modal = document.getElementById("mobileTitleModal");
       modal.style.display = "block";
@@ -367,10 +397,11 @@
         modal.style.display = "none";
       }, 3000);
     }
+  
     function closeMobileTitle() {
       document.getElementById("mobileTitleModal").style.display = "none";
     }
-
+  
     const themeToggleBtn = document.getElementById("themeToggle");
     themeToggleBtn.addEventListener("click", function () {
       const body = document.body;
@@ -385,18 +416,19 @@
         localStorage.setItem("theme", "light");
       }
     });
+  
     window.addEventListener("load", function () {
       const savedTheme = localStorage.getItem("theme") || "light";
       document.body.setAttribute("data-theme", savedTheme);
       themeToggleBtn.textContent =
         savedTheme === "light" ? "Modo Oscuro" : "Modo Claro";
     });
-
+  
     function toggleContactForm() {
       const cfc = document.getElementById("contactFormContainer");
       cfc.style.display = cfc.style.display === "block" ? "none" : "block";
     }
-
+  
     function sendContact(e) {
       e.preventDefault();
       alert("Mensaje enviado. ¡Gracias por contactarnos!");
@@ -404,5 +436,6 @@
       toggleContactForm();
     }
   </script>
+  
 </body>
 </html>
