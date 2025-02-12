@@ -238,12 +238,14 @@
     /* Iframe style (only visible if Agua is active) */
     #aguaIframe {
       width: 100%;
-      height: 1250px;
+      height: 1050px;
       border: 2px solid var(--accent-color);
       border-radius: 12px;
       margin-top: 20px;
       display: none; /* hidden by default */
     }
+
+
     @media (max-width: 768px) {
       .container {
         flex-direction: column;
@@ -295,7 +297,7 @@
           <!-- Iframe para agua.html, tal como ya lo tienes -->
           <iframe id="aguaIframe"
                   src="secciones/agua.html"
-                  style="width: 100%; height: 600px; border: none;">
+                  style="width: 100%; height: 1050px; border: none;">
           </iframe>
         </section>
       
@@ -305,7 +307,7 @@
           <!-- Iframe para basura.html, oculto por defecto si usas navigate(...) -->
           <iframe id="basuraIframe"
                   src="secciones/basura.html"
-                  style="width: 100%; height: 600px; border: none; display: none;">
+                  style="width: 100%; height: 1050px; border: none; display: none;">
           </iframe>
         </section>
       
