@@ -313,20 +313,14 @@
   <!-- Audio para alerta -->
   <audio id="alertSound" src="https://actions.google.com/sounds/v1/alarms/beep_short.ogg" preload="auto"></audio>
   <script>
-    // Reemplaza con tu URL de Apps Script
+    // Reemplaza con tu URL desplegado de Apps Script
     const scriptURL = 'https://script.google.com/macros/s/AKfycbyU069TXbCeP52mu3E_rsX4BwD3I7iMtks8V5Xqyt9Q_tPDpHojJ41i2irxxsm2SUj8Lg/exec';
     let orders = [];
   
+    // ===========================================
+    // 1) Llamado inicial: leer datos de la hoja
+    // ===========================================
     window.addEventListener("load", loadWaterData);
-  
-    // 1) parseLocalDate crea una fecha local sin huso horario
-    function parseLocalDate(yyyy_mm_dd) {
-      if (!yyyy_mm_dd) return null;
-      // Si viene "yyyy-mm-ddTHH..." recorta en "T"
-      const base = yyyy_mm_dd.includes("T") ? yyyy_mm_dd.split("T")[0] : yyyy_mm_dd;
-      const [y, m, d] = base.split("-");
-      return new Date(+y, +m - 1, +d); 
-    }
   
     function loadWaterData() {
       fetch(scriptURL)
@@ -341,24 +335,43 @@
         });
     }
   
-    // 2) formatearFecha usa parseLocalDate
-    function formatearFecha(fechaStr) {
-      if (!fechaStr) return "";
-      const fecha = parseLocalDate(fechaStr);
-      const dd = String(fecha.getDate()).padStart(2, "0");
-      const mm = String(fecha.getMonth() + 1).padStart(2, "0");
-      const yyyy = fecha.getFullYear();
-      return dd + "-" + mm + "-" + yyyy;
+    // ===========================================
+    // 2) parseLocalDateIgnoreTZ("yyyy-mm-dd")
+    // ===========================================
+    // Crea una fecha local sin restar horas por huso horario
+    function parseLocalDateIgnoreTZ(yyyy_mm_dd) {
+      if (!yyyy_mm_dd) return null;
+      // Si viniera con "T..." (ej. "2025-02-09T03:00:00Z"), recortamos
+      const base = yyyy_mm_dd.includes("T") ? yyyy_mm_dd.split("T")[0] : yyyy_mm_dd;
+      const [y, m, d] = base.split("-");
+      return new Date(+y, +m - 1, +d); 
     }
   
-    // 3) calcularDias usa parseLocalDate
+    // ===========================================
+    // 3) formatearFecha: sin usar new Date(...)
+    // ===========================================
+    // Convierte "yyyy-mm-dd" -> "dd-mm-yyyy" directamente por cadenas
+    function formatearFecha(yyyy_mm_dd) {
+      if (!yyyy_mm_dd) return "";
+      // Cortar si trae "T..."
+      const base = yyyy_mm_dd.includes("T") ? yyyy_mm_dd.split("T")[0] : yyyy_mm_dd;
+      const [y, m, d] = base.split("-");
+      return d + "-" + m + "-" + y; // dd-mm-yyyy
+    }
+  
+    // ===========================================
+    // 4) calcularDias: usando parseLocalDateIgnoreTZ
+    // ===========================================
     function calcularDias(fechaSolicitud, fechaLlegada = null) {
-      const inicio = parseLocalDate(fechaSolicitud) || new Date(); 
-      const fin = fechaLlegada ? parseLocalDate(fechaLlegada) : new Date();
+      const inicio = fechaSolicitud ? parseLocalDateIgnoreTZ(fechaSolicitud) : new Date();
+      const fin = fechaLlegada ? parseLocalDateIgnoreTZ(fechaLlegada) : new Date();
       const diffTime = Math.abs(fin - inicio);
       return Math.ceil(diffTime / (1000 * 60 * 60 * 24));
     }
   
+    // ===========================================
+    // 5) actualizarTablas
+    // ===========================================
     function actualizarTablas() {
       const openTbody = document.querySelector("#openOrdersTable tbody");
       const closedTbody = document.querySelector("#closedOrdersTable tbody");
@@ -367,28 +380,43 @@
   
       orders.forEach((order) => {
         const dias = calcularDias(order.fechaSolicitud, order.fechaLlegada);
+  
+        // Para la tabla, convertir a dd-mm-yyyy sin usar new Date
         const fechaSolFormateada = formatearFecha(order.fechaSolicitud);
         const fechaLlegadaFormateada = order.fechaLlegada
           ? formatearFecha(order.fechaLlegada)
           : "";
   
         const tr = document.createElement("tr");
-        const keys = ["id","terminal","glpi","cantidad","solicita","autoriza","estado","ppu"];
-        keys.forEach(key => {
+        const keys = [
+          "id", 
+          "terminal", 
+          "glpi", 
+          "cantidad", 
+          "solicita", 
+          "autoriza", 
+          "estado", 
+          "ppu"
+        ];
+        // Columnas base
+        keys.forEach((key) => {
           const td = document.createElement("td");
           td.textContent = order[key] || "";
           tr.appendChild(td);
         });
-        [fechaSolFormateada, fechaLlegadaFormateada, dias].forEach(value => {
+        // Agregar fecha solicitud, fecha llegada y días transcurridos
+        [fechaSolFormateada, fechaLlegadaFormateada, dias].forEach((value) => {
           const td = document.createElement("td");
           td.textContent = value;
           tr.appendChild(td);
         });
   
         if (!order.fechaLlegada) {
+          // Pedido abierto
           tr.addEventListener("click", () => cargarParaActualizar(order));
           openTbody.appendChild(tr);
         } else {
+          // Pedido cerrado
           closedTbody.appendChild(tr);
         }
       });
@@ -402,13 +430,21 @@
       document.getElementById("closedCount").textContent = closedCount;
     }
   
+    // ===========================================
+    // 6) actualizarGrafico
+    // ===========================================
     function actualizarGrafico() {
-      const meses = ["Enero","Febrero","Marzo","Abril","Mayo","Junio","Julio","Agosto","Septiembre","Octubre","Noviembre","Diciembre"];
+      const meses = [
+        "Enero","Febrero","Marzo","Abril","Mayo","Junio",
+        "Julio","Agosto","Septiembre","Octubre","Noviembre","Diciembre"
+      ];
       const resumen = {};
       meses.forEach(m => resumen[m] = 0);
+  
+      // Solo los cerrados (tienen fechaLlegada)
       const closedOrders = orders.filter(o => o.fechaLlegada);
       closedOrders.forEach(o => {
-        const fecha = parseLocalDate(o.fechaLlegada);
+        const fecha = parseLocalDateIgnoreTZ(o.fechaLlegada);
         const mes = meses[fecha.getMonth()];
         resumen[mes]++;
       });
@@ -441,15 +477,20 @@
       });
     }
   
+    // ===========================================
+    // 7) Manejo del formulario
+    // ===========================================
     document.getElementById("waterForm").addEventListener("submit", function(e) {
       e.preventDefault();
       const formData = new FormData(this);
       const data = Object.fromEntries(formData.entries());
   
       if (data.recordId && data.recordId !== "") {
+        // Actualiza la info local
         orders = orders.map(o => o.id === data.recordId ? { ...o, ...data } : o);
         mostrarToast("Registro actualizado correctamente.");
       } else {
+        // Nuevo
         data.id = "";
         orders.push(data);
         mostrarToast("Registro agregado correctamente.");
@@ -459,10 +500,12 @@
       actualizarTablas();
       actualizarGrafico();
   
+      // Envía al Apps Script
       fetch(scriptURL, { method: "POST", body: new URLSearchParams(data) })
         .then(response => response.json())
         .then(result => {
           mostrarToast(result.result);
+          // Recargar para ver datos reales de la hoja
           loadWaterData();
         })
         .catch(error => {
@@ -470,7 +513,11 @@
         });
     });
   
+    // ===========================================
+    // 8) cargarParaActualizar
+    // ===========================================
     function cargarParaActualizar(order) {
+      // Rellenar inputs
       document.getElementById("recordId").value = order.id;
       document.getElementById("terminal").value = order.terminal;
       document.getElementById("glpi").value = order.glpi;
@@ -478,16 +525,21 @@
       document.getElementById("solicita").value = order.solicita;
       document.getElementById("estado").value = order.estado;
       document.getElementById("ppu").value = order.ppu;
-      // Recortar si trae "T..."
+  
+      // Quitar parte "T..." si existe
       const fechaSolSinHora = order.fechaSolicitud
         ? order.fechaSolicitud.split("T")[0]
         : "";
       document.getElementById("fechaSolicitud").value = fechaSolSinHora;
   
+      // Limpia la fecha de llegada (se ingresará manualmente)
       document.getElementById("fechaLlegada").value = "";
       mostrarToast("Registro cargado para actualizar.");
     }
   
+    // ===========================================
+    // 9) Toast con sonido
+    // ===========================================
     function mostrarToast(mensaje, icono = "success") {
       const audio = document.getElementById("alertSound");
       audio.play().catch(err => console.error("Error reproduciendo audio:", err));
@@ -502,6 +554,7 @@
       });
     }
   </script>
+  
 </body>
 
 </html>
